@@ -1,10 +1,15 @@
 using facturas.Components;
+using facturas.Components.Data;
+using facturas.Components.Servicios;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddSingleton<ServicioControlador>();
+builder.Services.AddSingleton<ServicioFacturas>();
 
 var app = builder.Build();
 
