@@ -3,9 +3,18 @@
     public class Factura
     {
 
-        public DateOnly Fecha { get; set; }
-        public string Nombre { get; set; }
-        public List<Producto> Productos { get; set; }
+        public DateOnly Fecha { get; set; } = DateOnly.FromDateTime(DateTime.Now);
+        public string Nombre { get; set; } = string.Empty;
+        public List<Producto> Productos { get; set; } = new List<Producto>();
+
+        public decimal TotalFactura
+        {
+            get
+            {
+                // Suma el TotalItem de cada producto en la lista
+                return Productos.Sum(p => p.TotalItem);
+            }
+        }
 
     }
 }
