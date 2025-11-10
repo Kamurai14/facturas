@@ -18,5 +18,10 @@ namespace facturas.Components.Servicios
         {
             return await _servicioFacturas.ObtenerFacturasAsync();
         }
+
+        public async Task<Factura> ObtenerFacturasCompletaAsync(int facturaID) 
+        {
+            return await _servicioFacturas.ObtenerFacturaCompletaAsync(facturaID);
+        }
     }
 }

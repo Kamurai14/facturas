@@ -125,5 +125,55 @@ namespace facturas.Components.Data
             }
             return factura;
         }
+
+        public async Task ActualizarFacturaAsync(Factura factura) 
+        {
+            using var conexion = new SqliteConnection(_connectionString);
+            await conexion.OpenAsync();
+            using var transaccion = conexion.BeginTransaction();
+
+            try
+            {
+                var comandoFactura = conexion.CreateCommand();
+                comandoFactura.Transaction = transaccion;
+                comandoFactura.CommandText =
+                    @"UPDATE Facturas
+                      SET Fecha = $fecha, NombreCliente = $nombre, TotalFactura = $total
+                      WHERE FacturaID = $id";
+
+                comandoFactura.Parameters.AddWithValue("$fecha", factura.Fecha.ToString("o"));
+                comandoFactura.Parameters.AddWithValue("$nombre", factura.Nombre);
+                comandoFactura.Parameters.AddWithValue("$total", factura.TotalFactura);
+                comandoFactura.Parameters.AddWithValue("$id", factura.FacturaID);
+                await comandoFactura.ExecuteNonQueryAsync();
+
+                var comandoBorrarProductos = conexion.CreateCommand();
+                comandoBorrarProductos.Transaction = transaccion;
+                comandoBorrarProductos.CommandText = @"DELETE FROM FacturaProductos WHERE FacturaID = $id";
+                comandoBorrarProductos.Parameters.AddWithValue("$id", factura.FacturaID);
+                await comandoBorrarProductos.ExecuteNonQueryAsync();
+
+                foreach (var productos in factura.Productos)
+                {
+                    var comandoProducto = conexion.CreateCommand();
+                    comandoProducto.Transaction = transaccion;
+                    comandoProducto.CommandText =
+                        @"INSERT INTO FacturaProductos (FacturaID, Nombre, Cantidad, PrecioUnitario)
+                          VALUES ($facturaID, $nombreProd, $cantidad, $precio";
+
+                    comandoProducto.Parameters.AddWithValue("$facturaID", factura.FacturaID);
+                    comandoProducto.Parameters.AddWithValue("$nombreProd", productos.Nombre);
+                    comandoProducto.Parameters.AddWithValue("$cantidad", productos.Cantidad);
+                    comandoProducto.Parameters.AddWithValue("$precio", productos.PrecioUnitario);
+                    await comandoProducto.ExecuteNonQueryAsync();
+                }
+                await transaccion.CommitAsync();
+            }
+            catch 
+            {
+                await transaccion.RollbackAsync();
+                throw;
+            }
+        }
     }
 }
