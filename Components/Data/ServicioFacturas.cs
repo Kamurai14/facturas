@@ -88,5 +88,42 @@ namespace facturas.Components.Data
             }
             return facturas;
         }
+
+        public async Task<Factura> ObtenerFacturaCompletaAsync(int facturaID) 
+        {
+            using var conexion = new SqliteConnection(_connectionString);
+            await conexion.OpenAsync();
+
+            var factura = new Factura();
+            var comandoFactura = conexion.CreateCommand();
+            comandoFactura.CommandText = @"SELECT * FROM Facturas WHERE FacturaID = $id";
+            comandoFactura.Parameters.AddWithValue("$id", facturaID);
+
+            using (var lector = await comandoFactura.ExecuteReaderAsync()) 
+            {
+                factura.FacturaID = lector.GetInt32(0);
+                factura.Fecha = DateOnly.Parse(lector.GetString(1));
+                factura.Nombre = lector.GetString(2);
+                factura.TotalFactura = lector.GetDecimal(3);
+            }
+
+            var comandoProductos = conexion.CreateCommand();
+            comandoProductos.CommandText = @"SELECT Nombre,Cantidad,PrecioUnitario FROM Facturas WHERE FacturaID = $id";
+            comandoProductos.Parameters.AddWithValue("$id", facturaID);
+
+            using (var lector = await comandoProductos.ExecuteReaderAsync()) 
+            {
+                while (await lector.ReadAsync()) 
+                {
+                    factura.Productos.Add(new Producto
+                    {
+                        Nombre = lector.GetString(0),
+                        Cantidad = lector.GetInt32(1),
+                        PrecioUnitario = lector.GetDecimal(2)
+                    });                                   
+                }
+            }
+            return factura;
+        }
     }
 }
