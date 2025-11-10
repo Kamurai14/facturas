@@ -62,5 +62,31 @@ namespace facturas.Components.Data
                 throw;
             }
         }
+
+        public async Task<List<Factura>> ObtenerFacturasAsync()
+        {
+            var facturas = new List<Factura>();
+            using var conexion = new SqliteConnection(_connectionString);
+            await conexion.OpenAsync();
+
+            var comando = conexion.CreateCommand();
+            comando.CommandText = @"
+        SELECT FacturaID, Fecha, NombreCliente, TotalFactura 
+        FROM Facturas 
+        ORDER BY FacturaID DESC";
+
+            using var lector = await comando.ExecuteReaderAsync();
+            while (await lector.ReadAsync())
+            {
+                facturas.Add(new Factura
+                {
+                    FacturaID = lector.GetInt32(0),
+                    Fecha = DateOnly.Parse(lector.GetString(1)),
+                    Nombre = lector.GetString(2),
+                    TotalFactura = lector.GetDecimal(3)
+                });
+            }
+            return facturas;
+        }
     }
 }

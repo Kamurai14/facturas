@@ -1,4 +1,206 @@
 ﻿@page "/"
+@using facturas.Components.Data
+@using facturas.Components.Servicios
+
+@rendermode InteractiveServer
+
+@inject ServicioControlador ServicioControlador
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Factura</PageTitle>
+
+<h1>FACTURAS</h1>
+
+<div class="container">
+
+    <div class="row">
+        <div class="col-md-4">
+            <h3>Datos del cliente</h3>
+            <div class="mb-3">
+                <label>Nombre del cliente:</label>
+                <input type="text" class="form-control" @bind="factura.Nombre" />
+            </div>
+            <div class="mb-3">
+                <label>Fecha de la factura:</label>
+                <input type="date" class="form-control" @bind="factura.Fecha" />
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <h3>Añadir Artículo</h3>
+            <div class="row g-3 align-items-end">
+                <div class="col-sm"><label>Artículo</label><input class="form-control" @bind="nuevoProducto.Nombre" /></div>
+                <div class="col-sm-2"><label>Cant.</label><input type="number" class="form-control" @bind="nuevoProducto.Cantidad" /></div>
+                <div class="col-sm-3"><label>Precio</label><input type="number" class="form-control" @bind="nuevoProducto.PrecioUnitario" /></div>
+                <div class="col-sm-auto"><button class="btn btn-primary" @onclick="AgregarProducto">Añadir</button></div>
+            </div>
+        </div>
+    </div>
+    <hr />
+
+    <h3>Artículos</h3>
+    @if (factura.Productos.Any())
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Artículo</th>
+                    <th>Cantidad</th>
+                    <th>Precio Unitario</th>
+                    <th>Total Artículo</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var prod in factura.Productos)
+                {
+                    <tr>
+                        <td>@prod.Nombre</td>
+                        <td>@prod.Cantidad</td>
+                        <td>@prod.PrecioUnitario.ToString("C")</td>
+                        <td>@prod.TotalItem.ToString("C")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <div class="text-end">
+            <h2 class="mt-4">Total Factura: @factura.TotalFactura.ToString("C")</h2>
+        </div>
+    }
+    else
+    {
+
+        <p>No se han añadido productos.</p>
+    }
+
+    <div class="mt-4">
+        <button class="btn btn-success btn-lg" @onclick="GuardarFactura" disabled="@(factura.Productos.Count == 0)">
+            Guardar Factura
+        </button>
+    </div>
+    @if (!string.IsNullOrEmpty(mensajeError))
+    {
+        <div class="alert alert-danger mt-3">@mensajeError</div>
+    }
+    @if (!string.IsNullOrEmpty(mensajeExito))
+    {
+        <div class="alert alert-success mt-3">@mensajeExito</div>
+    }
+
+
+    <hr class="mt-5" />
+
+    <h2>Facturas Guardadas</h2>
+
+    @if (facturasGuardadas.Count == 0)
+    {
+        <p>No hay facturas guardadas.</p>
+    }
+    else
+    {
+        <table class="table table-striped mt-3">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Fecha</th>
+                    <th>Cliente</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var fact in facturasGuardadas)
+                {
+                    <tr>
+                        <td>@fact.FacturaID</td>
+                        <td>@fact.Fecha.ToShortDateString()</td>
+                        <td>@fact.Nombre</td>
+                        <td>@fact.TotalFactura.ToString("C")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+</div>
+
+
+@code {
+    private Factura factura = new Factura();
+    private Producto nuevoProducto = new Producto();
+    private string mensajeError = string.Empty;
+    private string mensajeExito = string.Empty;
+
+    private List<Factura> facturasGuardadas = new List<Factura>();
+
+    private async Task CargarFacturasGuardadas()
+    {
+        try
+        {
+            mensajeError = string.Empty;
+            facturasGuardadas = await ServicioControlador.ObtenerFacturasAsync();
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al cargar facturas: {ex.Message}";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarFacturasGuardadas();
+    }
+
+    private void AgregarProducto()
+    {
+        mensajeError = string.Empty;
+        mensajeExito = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(nuevoProducto.Nombre))
+        {
+            mensajeError = "El nombre del artículo no puede estar vacío.";
+            return;
+        }
+        if (nuevoProducto.Cantidad <= 0)
+        {
+            mensajeError = "La cantidad debe ser al menos 1.";
+            return;
+        }
+        if (nuevoProducto.PrecioUnitario <= 0)
+        {
+            mensajeError = "El precio debe ser mayor a 0.";
+            return;
+        }
+        factura.Productos.Add(nuevoProducto);
+        nuevoProducto = new Producto();
+    }
+
+    private async Task GuardarFactura()
+    {
+        mensajeError = string.Empty;
+        mensajeExito = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(factura.Nombre))
+        {
+            mensajeError = "Se requiere un nombre de cliente.";
+            return;
+        }
+        if (!factura.Productos.Any())
+        {
+            mensajeError = "Debe añadir al menos un producto a la factura.";
+            return;
+        }
+
+        try
+        {
+            await ServicioControlador.GuardarFacturaAsync(factura);
+            factura = new Factura(); 
+            mensajeExito = "¡Factura guardada correctamente!";
+          
+            await CargarFacturasGuardadas();
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al guardar la factura: {ex.Message}";
+        }
+    }
+}
 

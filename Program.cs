@@ -9,8 +9,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddSingleton<ServicioControlador>();
-builder.Services.AddSingleton<ServicioFacturas>();
+builder.Services.AddTransient<facturas.Components.Data.ServicioFacturas>();
+builder.Services.AddTransient<facturas.Components.Servicios.ServicioControlador>();
 
 var app = builder.Build();
 
@@ -23,8 +23,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-
+app.UseStaticFiles();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
@@ -33,13 +32,32 @@ app.MapRazorComponents<App>()
 
 String ruta = "facturasdb.db";
 
-using var conexion = new SqliteConnection($"DataSource={ruta}");
+builder.Configuration.AddInMemoryCollection(new[] {
+    new KeyValuePair<string, string>("ConnectionStrings:DefaultConnection", $"DataSource={ruta}")
+});
+
+using var conexion =  new SqliteConnection(app.Configuration.GetConnectionString("DefaultConnection"));
 conexion.Open();
+
 var comando = conexion.CreateCommand();
 comando.CommandText = @"
-create table if not exists
-facturas( fecha text, nombre text, articulo text, precio integer, total integer)
-";
+CREATE TABLE IF NOT EXISTS Facturas (
+    FacturaID INTEGER PRIMARY KEY AUTOINCREMENT,
+    Fecha TEXT NOT NULL,
+    NombreCliente TEXT NOT NULL,
+    TotalFactura DECIMAL NOT NULL
+);";
+comando.ExecuteNonQuery();
+
+comando.CommandText = @"
+CREATE TABLE IF NOT EXISTS FacturaProductos (
+    ProductoID INTEGER PRIMARY KEY AUTOINCREMENT,
+    FacturaID INTEGER NOT NULL,
+    Nombre TEXT NOT NULL,
+    Cantidad INTEGER NOT NULL,
+    PrecioUnitario DECIMAL NOT NULL,
+    FOREIGN KEY (FacturaID) REFERENCES Facturas (FacturaID) ON DELETE CASCADE
+);";
 comando.ExecuteNonQuery();
 
 app.Run();

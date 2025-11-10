@@ -14,5 +14,9 @@ namespace facturas.Components.Servicios
         {
             await _servicioFacturas.GuardarFacturaAsync(factura);
         }
+        public async Task<List<Factura>> ObtenerFacturasAsync()
+        {
+            return await _servicioFacturas.ObtenerFacturasAsync();
+        }
     }
 }
