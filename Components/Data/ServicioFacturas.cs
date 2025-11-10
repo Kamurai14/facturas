@@ -175,5 +175,16 @@ namespace facturas.Components.Data
                 throw;
             }
         }
+
+        public async Task EliminarFacturaAsync(int facturaID) 
+        {
+            using var conexion = new SqliteConnection(_connectionString);
+            await conexion.OpenAsync();
+
+            var comando = conexion.CreateCommand();
+            comando.CommandText = @"DELETE FROM Facturas WHERE FacturaID = $id";
+            comando.Parameters.AddWithValue("$id", facturaID);
+            await comando.ExecuteNonQueryAsync();
+        }
     }
 }
