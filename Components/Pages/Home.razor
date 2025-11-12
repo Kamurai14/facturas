@@ -1,7 +1,6 @@
 ﻿@page "/"
 @using facturas.Components.Data
 @using facturas.Components.Servicios
-
 @rendermode InteractiveServer
 
 @inject ServicioControlador ServicioControlador
@@ -9,7 +8,15 @@
 
 <PageTitle>Factura</PageTitle>
 
-<h1>FACTURAS</h1>
+@if (modoEdicion)
+{
+    <h1>Editando Factura #@factura.FacturaID</h1>
+}
+else
+{
+    <h1>Nueva Factura</h1>
+}
+
 
 <div class="container">
 
@@ -48,6 +55,7 @@
                     <th>Cantidad</th>
                     <th>Precio Unitario</th>
                     <th>Total Artículo</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -58,6 +66,11 @@
                         <td>@prod.Cantidad</td>
                         <td>@prod.PrecioUnitario.ToString("C")</td>
                         <td>@prod.TotalItem.ToString("C")</td>
+                        <td>
+                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarProducto(prod)">
+                                Quitar
+                            </button>
+                        </td>
                     </tr>
                 }
             </tbody>
@@ -73,10 +86,23 @@
     }
 
     <div class="mt-4">
-        <button class="btn btn-success btn-lg" @onclick="GuardarFactura" disabled="@(factura.Productos.Count == 0)">
-            Guardar Factura
-        </button>
+        @if (modoEdicion)
+        {
+            <button class="btn btn-warning btn-lg me-2" @onclick="GuardarFactura">
+                Actualizar Factura
+            </button>
+            <button class="btn btn-secondary btn-lg" @onclick="CancelarEdicion">
+                Cancelar
+            </button>
+        }
+        else
+        {
+            <button class="btn btn-success btn-lg" @onclick="GuardarFactura" disabled="@(factura.Productos.Count == 0)">
+                Guardar Factura
+            </button>
+        }
     </div>
+
     @if (!string.IsNullOrEmpty(mensajeError))
     {
         <div class="alert alert-danger mt-3">@mensajeError</div>
@@ -104,6 +130,7 @@
                     <th>Fecha</th>
                     <th>Cliente</th>
                     <th>Total</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -114,6 +141,14 @@
                         <td>@fact.Fecha.ToShortDateString()</td>
                         <td>@fact.Nombre</td>
                         <td>@fact.TotalFactura.ToString("C")</td>
+                        <td>
+                            <button class="btn btn-primary btn-sm" @onclick="() => CargarFacturaParaEditar(fact)">
+                                Editar
+                            </button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarFacturaGuardada(fact)">
+                                Eliminar
+                            </button>
+                        </td>
                     </tr>
                 }
             </tbody>
@@ -128,6 +163,8 @@
     private Producto nuevoProducto = new Producto();
     private string mensajeError = string.Empty;
     private string mensajeExito = string.Empty;
+
+    private bool modoEdicion = false;
 
     private List<Factura> facturasGuardadas = new List<Factura>();
 
@@ -153,24 +190,26 @@
     {
         mensajeError = string.Empty;
         mensajeExito = string.Empty;
-
         if (string.IsNullOrWhiteSpace(nuevoProducto.Nombre))
         {
-            mensajeError = "El nombre del artículo no puede estar vacío.";
-            return;
+            mensajeError = "El nombre del artículo no puede estar vacío."; return;
         }
         if (nuevoProducto.Cantidad <= 0)
         {
-            mensajeError = "La cantidad debe ser al menos 1.";
-            return;
+            mensajeError = "La cantidad debe ser al menos 1."; return;
         }
         if (nuevoProducto.PrecioUnitario <= 0)
         {
-            mensajeError = "El precio debe ser mayor a 0.";
-            return;
+            mensajeError = "El precio debe ser mayor a 0."; return;
         }
+
         factura.Productos.Add(nuevoProducto);
         nuevoProducto = new Producto();
+    }
+
+    private void EliminarProducto(Producto productoAEliminar)
+    {
+        factura.Productos.Remove(productoAEliminar);
     }
 
     private async Task GuardarFactura()
@@ -180,27 +219,79 @@
 
         if (string.IsNullOrWhiteSpace(factura.Nombre))
         {
-            mensajeError = "Se requiere un nombre de cliente.";
-            return;
+            mensajeError = "Se requiere un nombre de cliente."; return;
         }
         if (!factura.Productos.Any())
         {
-            mensajeError = "Debe añadir al menos un producto a la factura.";
-            return;
+            mensajeError = "Debe añadir al menos un producto a la factura."; return;
         }
 
         try
         {
-            await ServicioControlador.GuardarFacturaAsync(factura);
+            if (modoEdicion)
+            {
+                await ServicioControlador.ActualizarFacturaAsync(factura);
+                mensajeExito = "¡Factura actualizada correctamente!";
+                modoEdicion = false;
+            }
+            else
+            {
+                await ServicioControlador.GuardarFacturaAsync(factura);
+                mensajeExito = "¡Factura guardada correctamente!";
+            }
+
             factura = new Factura(); 
-            mensajeExito = "¡Factura guardada correctamente!";
-          
-            await CargarFacturasGuardadas();
+            await CargarFacturasGuardadas(); 
         }
         catch (Exception ex)
         {
-            mensajeError = $"Error al guardar la factura: {ex.Message}";
+            mensajeError = $"Error al procesar la factura: {ex.Message}";
+        }
+    }
+
+    private async Task CargarFacturaParaEditar(Factura facturaAEditar)
+    {
+        try
+        {
+            factura = await ServicioControlador.ObtenerFacturaCompletaAsync(facturaAEditar.FacturaID);
+            modoEdicion = true;
+            mensajeError = string.Empty;
+            mensajeExito = string.Empty;
+
+            await JSRuntime.InvokeVoidAsync("window.scrollTo", 0, 0);
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al cargar la factura: {ex.Message}";
+        }
+    }
+
+    private void CancelarEdicion()
+    {
+        factura = new Factura();
+        modoEdicion = false;
+        mensajeError = string.Empty;
+        mensajeExito = string.Empty;
+    }
+
+    private async Task EliminarFacturaGuardada(Factura facturaAEliminar)
+    {
+        try
+        {
+            
+            bool confirmado = await JSRuntime.InvokeAsync<bool>("confirm",
+                $"¿Estás seguro de que quieres eliminar la Factura #{facturaAEliminar.FacturaID} del cliente {facturaAEliminar.Nombre}?");
+
+            if (confirmado)
+            {
+                await ServicioControlador.EliminarFacturaAsync(facturaAEliminar.FacturaID);
+                mensajeExito = "Factura eliminada.";
+                await CargarFacturasGuardadas(); 
+            }
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al eliminar la factura: {ex.Message}";
         }
     }
 }
-

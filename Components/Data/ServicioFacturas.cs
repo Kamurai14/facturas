@@ -91,42 +91,52 @@ namespace facturas.Components.Data
 
         public async Task<Factura> ObtenerFacturaCompletaAsync(int facturaID) 
         {
+            Factura? factura = null;
+
             using var conexion = new SqliteConnection(_connectionString);
             await conexion.OpenAsync();
 
-            var factura = new Factura();
             var comandoFactura = conexion.CreateCommand();
-            comandoFactura.CommandText = @"SELECT * FROM Facturas WHERE FacturaID = $id";
+            comandoFactura.CommandText = @"SELECT FacturaID, Fecha, NombreCliente, TotalFactura FROM Facturas WHERE FacturaID = $id";
             comandoFactura.Parameters.AddWithValue("$id", facturaID);
 
             using (var lector = await comandoFactura.ExecuteReaderAsync()) 
             {
-                factura.FacturaID = lector.GetInt32(0);
-                factura.Fecha = DateOnly.Parse(lector.GetString(1));
-                factura.Nombre = lector.GetString(2);
-                factura.TotalFactura = lector.GetDecimal(3);
-            }
-
-            var comandoProductos = conexion.CreateCommand();
-            comandoProductos.CommandText = @"SELECT Nombre,Cantidad,PrecioUnitario FROM Facturas WHERE FacturaID = $id";
-            comandoProductos.Parameters.AddWithValue("$id", facturaID);
-
-            using (var lector = await comandoProductos.ExecuteReaderAsync()) 
-            {
-                while (await lector.ReadAsync()) 
+                if (await lector.ReadAsync()) 
                 {
-                    factura.Productos.Add(new Producto
+                    factura = new Factura
                     {
-                        Nombre = lector.GetString(0),
-                        Cantidad = lector.GetInt32(1),
-                        PrecioUnitario = lector.GetDecimal(2)
-                    });                                   
+                        FacturaID = lector.GetInt32(lector.GetOrdinal("FacturaID")),
+                        Fecha = DateOnly.Parse(lector.GetString(lector.GetOrdinal("Fecha"))),
+                        Nombre = lector.GetString(lector.GetOrdinal("NombreCliente")),
+                        TotalFactura = lector.GetDecimal(lector.GetOrdinal("TotalFactura"))
+                    };
+                }
+                
+            }
+            if (factura != null)
+            {
+                var comandoProductos = conexion.CreateCommand();
+                comandoProductos.CommandText = @"SELECT Nombre, Cantidad, PrecioUnitario FROM FacturaProductos WHERE FacturaID = $id";
+                comandoProductos.Parameters.AddWithValue("$id", facturaID);
+
+                using (var lector = await comandoProductos.ExecuteReaderAsync()) 
+                {
+                    while (await lector.ReadAsync()) 
+                    {
+                        factura.Productos.Add(new Producto
+                        {
+                            Nombre = lector.GetString(lector.GetOrdinal("Nombre")),
+                            Cantidad = lector.GetInt32(lector.GetOrdinal("Cantidad")),
+                            PrecioUnitario = lector.GetDecimal(lector.GetOrdinal("PrecioUnitario"))
+                        });
+                    }
                 }
             }
-            return factura;
+            return factura ?? new Factura();
         }
 
-        public async Task ActualizarFacturaAsync(Factura factura) 
+        public async Task ActualizarFacturaAsync(Factura factura)
         {
             using var conexion = new SqliteConnection(_connectionString);
             await conexion.OpenAsync();
@@ -136,10 +146,11 @@ namespace facturas.Components.Data
             {
                 var comandoFactura = conexion.CreateCommand();
                 comandoFactura.Transaction = transaccion;
+
                 comandoFactura.CommandText =
-                    @"UPDATE Facturas
-                      SET Fecha = $fecha, NombreCliente = $nombre, TotalFactura = $total
-                      WHERE FacturaID = $id";
+                    @"UPDATE Facturas 
+              SET Fecha = $fecha, NombreCliente = $nombre, TotalFactura = $total
+              WHERE FacturaID = $id";
 
                 comandoFactura.Parameters.AddWithValue("$fecha", factura.Fecha.ToString("o"));
                 comandoFactura.Parameters.AddWithValue("$nombre", factura.Nombre);
@@ -147,29 +158,32 @@ namespace facturas.Components.Data
                 comandoFactura.Parameters.AddWithValue("$id", factura.FacturaID);
                 await comandoFactura.ExecuteNonQueryAsync();
 
-                var comandoBorrarProductos = conexion.CreateCommand();
-                comandoBorrarProductos.Transaction = transaccion;
-                comandoBorrarProductos.CommandText = @"DELETE FROM FacturaProductos WHERE FacturaID = $id";
-                comandoBorrarProductos.Parameters.AddWithValue("$id", factura.FacturaID);
-                await comandoBorrarProductos.ExecuteNonQueryAsync();
+                var comandoBorrarProds = conexion.CreateCommand();
+                comandoBorrarProds.Transaction = transaccion;
 
-                foreach (var productos in factura.Productos)
+                comandoBorrarProds.CommandText = @"DELETE FROM FacturaProductos WHERE FacturaID = $id";
+
+                comandoBorrarProds.Parameters.AddWithValue("$id", factura.FacturaID);
+                await comandoBorrarProds.ExecuteNonQueryAsync();
+
+                foreach (var producto in factura.Productos)
                 {
                     var comandoProducto = conexion.CreateCommand();
                     comandoProducto.Transaction = transaccion;
+
                     comandoProducto.CommandText =
                         @"INSERT INTO FacturaProductos (FacturaID, Nombre, Cantidad, PrecioUnitario)
-                          VALUES ($facturaID, $nombreProd, $cantidad, $precio";
+                  VALUES ($facturaID, $nombreProd, $cantidad, $precio)";
 
                     comandoProducto.Parameters.AddWithValue("$facturaID", factura.FacturaID);
-                    comandoProducto.Parameters.AddWithValue("$nombreProd", productos.Nombre);
-                    comandoProducto.Parameters.AddWithValue("$cantidad", productos.Cantidad);
-                    comandoProducto.Parameters.AddWithValue("$precio", productos.PrecioUnitario);
+                    comandoProducto.Parameters.AddWithValue("$nombreProd", producto.Nombre);
+                    comandoProducto.Parameters.AddWithValue("$cantidad", producto.Cantidad);
+                    comandoProducto.Parameters.AddWithValue("$precio", producto.PrecioUnitario);
                     await comandoProducto.ExecuteNonQueryAsync();
                 }
                 await transaccion.CommitAsync();
             }
-            catch 
+            catch (Exception)
             {
                 await transaccion.RollbackAsync();
                 throw;

@@ -19,7 +19,7 @@ namespace facturas.Components.Servicios
             return await _servicioFacturas.ObtenerFacturasAsync();
         }
 
-        public async Task<Factura> ObtenerFacturasCompletaAsync(int facturaID) 
+        public async Task<Factura> ObtenerFacturaCompletaAsync(int facturaID) 
         {
             return await _servicioFacturas.ObtenerFacturaCompletaAsync(facturaID);
         }
@@ -29,6 +29,9 @@ namespace facturas.Components.Servicios
             await _servicioFacturas.ActualizarFacturaAsync(factura);
         }
 
-
+        public async Task EliminarFacturaAsync(int facturaID) 
+        {
+            await _servicioFacturas.EliminarFacturaAsync(facturaID);
+        }
     }
 }
