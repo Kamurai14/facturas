@@ -9,8 +9,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddTransient<facturas.Components.Data.ServicioFacturas>();
-builder.Services.AddTransient<facturas.Components.Servicios.ServicioControlador>();
+builder.Services.AddSingleton<ServicioFacturas>();
+builder.Services.AddSingleton<ServicioControlador>();
 
 var app = builder.Build();
 
