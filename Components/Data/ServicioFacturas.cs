@@ -15,13 +15,10 @@ namespace facturas.Components.Data
         
         public async Task GuardarFacturaAsync(Factura factura)
         {
-            using var conexion = new SqliteConnection(_connectionString);
-            await conexion.OpenAsync();
+            await using var conexion = await ObtenerConexionAbiertaAsync();
             using var transaccion = conexion.BeginTransaction();
-
             try
-            {
-        
+            {        
                 var comandoFactura = conexion.CreateCommand();
                 comandoFactura.Transaction = transaccion;
                 comandoFactura.CommandText =
@@ -34,30 +31,11 @@ namespace facturas.Components.Data
                 comandoFactura.Parameters.AddWithValue("$total", factura.TotalFactura);
 
                 long nuevaFacturaID = (long)await comandoFactura.ExecuteScalarAsync();
-
-              
-                foreach (var producto in factura.Productos)
-                {
-                    var comandoProducto = conexion.CreateCommand();
-                    comandoProducto.Transaction = transaccion;
-                    comandoProducto.CommandText =
-                        @"INSERT INTO FacturaProductos (FacturaID, Nombre, Cantidad, PrecioUnitario)
-                          VALUES ($facturaID, $nombreProd, $cantidad, $precio)";
-
-                    comandoProducto.Parameters.AddWithValue("$facturaID", nuevaFacturaID);
-                    comandoProducto.Parameters.AddWithValue("$nombreProd", producto.Nombre);
-                    comandoProducto.Parameters.AddWithValue("$cantidad", producto.Cantidad);
-                    comandoProducto.Parameters.AddWithValue("$precio", producto.PrecioUnitario);
-
-                    await comandoProducto.ExecuteNonQueryAsync();
-                }
-
-               
+                await InsertarProductosAsync(transaccion, factura.Productos, nuevaFacturaID);
                 await transaccion.CommitAsync();
             }
             catch (Exception)
             {
-              
                 await transaccion.RollbackAsync();
                 throw;
             }
@@ -66,9 +44,7 @@ namespace facturas.Components.Data
         public async Task<List<Factura>> ObtenerFacturasAsync()
         {
             var facturas = new List<Factura>();
-            using var conexion = new SqliteConnection(_connectionString);
-            await conexion.OpenAsync();
-
+            await using var conexion = await ObtenerConexionAbiertaAsync();
             var comando = conexion.CreateCommand();
             comando.CommandText = @"
         SELECT FacturaID, Fecha, NombreCliente, TotalFactura 
@@ -80,10 +56,10 @@ namespace facturas.Components.Data
             {
                 facturas.Add(new Factura
                 {
-                    FacturaID = lector.GetInt32(0),
-                    Fecha = DateOnly.Parse(lector.GetString(1)),
-                    Nombre = lector.GetString(2),
-                    TotalFactura = lector.GetDecimal(3)
+                    FacturaID = lector.GetInt32(lector.GetOrdinal("FacturaID")),
+                    Fecha = DateOnly.Parse(lector.GetString(lector.GetOrdinal("Fecha"))),
+                    Nombre = lector.GetString(lector.GetOrdinal("NombreCliente")),
+                    TotalFactura = lector.GetDecimal(lector.GetOrdinal("TotalFactura"))
                 });
             }
             return facturas;
@@ -92,9 +68,7 @@ namespace facturas.Components.Data
         public async Task<Factura> ObtenerFacturaCompletaAsync(int facturaID) 
         {
             Factura? factura = null;
-
-            using var conexion = new SqliteConnection(_connectionString);
-            await conexion.OpenAsync();
+            await using var conexion = await ObtenerConexionAbiertaAsync();
 
             var comandoFactura = conexion.CreateCommand();
             comandoFactura.CommandText = @"SELECT FacturaID, Fecha, NombreCliente, TotalFactura FROM Facturas WHERE FacturaID = $id";
@@ -133,13 +107,12 @@ namespace facturas.Components.Data
                     }
                 }
             }
-            return factura ?? new Factura();
+            return factura;
         }
 
         public async Task ActualizarFacturaAsync(Factura factura)
         {
-            using var conexion = new SqliteConnection(_connectionString);
-            await conexion.OpenAsync();
+            await using var conexion = await ObtenerConexionAbiertaAsync();
             using var transaccion = conexion.BeginTransaction();
 
             try
@@ -166,21 +139,7 @@ namespace facturas.Components.Data
                 comandoBorrarProds.Parameters.AddWithValue("$id", factura.FacturaID);
                 await comandoBorrarProds.ExecuteNonQueryAsync();
 
-                foreach (var producto in factura.Productos)
-                {
-                    var comandoProducto = conexion.CreateCommand();
-                    comandoProducto.Transaction = transaccion;
-
-                    comandoProducto.CommandText =
-                        @"INSERT INTO FacturaProductos (FacturaID, Nombre, Cantidad, PrecioUnitario)
-                  VALUES ($facturaID, $nombreProd, $cantidad, $precio)";
-
-                    comandoProducto.Parameters.AddWithValue("$facturaID", factura.FacturaID);
-                    comandoProducto.Parameters.AddWithValue("$nombreProd", producto.Nombre);
-                    comandoProducto.Parameters.AddWithValue("$cantidad", producto.Cantidad);
-                    comandoProducto.Parameters.AddWithValue("$precio", producto.PrecioUnitario);
-                    await comandoProducto.ExecuteNonQueryAsync();
-                }
+                await InsertarProductosAsync(transaccion, factura.Productos, factura.FacturaID);
                 await transaccion.CommitAsync();
             }
             catch (Exception)
@@ -192,13 +151,38 @@ namespace facturas.Components.Data
 
         public async Task EliminarFacturaAsync(int facturaID) 
         {
-            using var conexion = new SqliteConnection(_connectionString);
-            await conexion.OpenAsync();
+            await using var conexion = await ObtenerConexionAbiertaAsync();
 
             var comando = conexion.CreateCommand();
             comando.CommandText = @"DELETE FROM Facturas WHERE FacturaID = $id";
             comando.Parameters.AddWithValue("$id", facturaID);
             await comando.ExecuteNonQueryAsync();
+        }
+
+        private async Task<SqliteConnection> ObtenerConexionAbiertaAsync()
+        {
+            var conexion = new SqliteConnection(_connectionString);
+            await conexion.OpenAsync();
+            return conexion;
+        }
+
+        private async Task InsertarProductosAsync(SqliteTransaction transaccion, List<Producto> productos, long facturaID) 
+        {
+            foreach (var producto in productos) 
+            {
+                var comandoProducto = transaccion.Connection!.CreateCommand();
+                comandoProducto.Transaction = transaccion;
+
+                comandoProducto.CommandText = @"INSERT INTO FacturaProductos (FacturaID, Nombre, Cantidad, PrecioUnitario) 
+                                                VALUES ($facturaID, $nombreProd, $cantidad, $precio)";
+
+                comandoProducto.Parameters.AddWithValue("$facturaID", facturaID);
+                comandoProducto.Parameters.AddWithValue("$nombreProd", producto.Nombre);
+                comandoProducto.Parameters.AddWithValue("$cantidad", producto.Cantidad);
+                comandoProducto.Parameters.AddWithValue("$precio", producto.PrecioUnitario);
+
+                await comandoProducto.ExecuteNonQueryAsync();
+            }
         }
     }
 }
