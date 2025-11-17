@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.Sqlite;
+using System.Globalization;
 
 namespace facturas.Components.Data
 {
@@ -183,6 +184,34 @@ namespace facturas.Components.Data
 
                 await comandoProducto.ExecuteNonQueryAsync();
             }
+        }
+
+        public async Task<List<ReporteMensual>> ObtenerReporteAnualAsync(int anio)
+        {
+            var reporte = new List<ReporteMensual>();
+            await using var conexion = await ObtenerConexionAbiertaAsync();
+            var comando = conexion.CreateCommand();
+            comando.CommandText = @"
+        SELECT 
+            STRFTIME('%m', Fecha) AS Mes, 
+            SUM(TotalFactura) AS TotalMes
+        FROM Facturas
+        WHERE STRFTIME('%Y', Fecha) = $anio
+        GROUP BY Mes
+        ORDER BY Mes ASC;";
+
+            comando.Parameters.AddWithValue("$anio", anio.ToString());
+
+            using var lector = await comando.ExecuteReaderAsync();
+            while (await lector.ReadAsync())
+            {
+                reporte.Add(new ReporteMensual
+                {
+                    Mes = lector.GetString(lector.GetOrdinal("Mes")),
+                    TotalMes = lector.GetDecimal(lector.GetOrdinal("TotalMes"))
+                });
+            }
+            return reporte;
         }
     }
 }

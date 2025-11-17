@@ -33,5 +33,9 @@ namespace facturas.Components.Servicios
         {
             await _servicioFacturas.EliminarFacturaAsync(facturaID);
         }
+        public async Task<List<ReporteMensual>> ObtenerReporteAnualAsync(int anio)
+        {
+            return await _servicioFacturas.ObtenerReporteAnualAsync(anio);
+        }
     }
 }
