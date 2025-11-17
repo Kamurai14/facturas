@@ -5,6 +5,12 @@ using Microsoft.Data.Sqlite;
 
 var builder = WebApplication.CreateBuilder(args);
 
+String ruta = "facturasdb.db";
+
+builder.Configuration.AddInMemoryCollection(new[] {
+    new KeyValuePair<string, string>("ConnectionStrings:DefaultConnection", $"DataSource={ruta}")
+});
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -14,29 +20,7 @@ builder.Services.AddSingleton<ServicioControlador>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
-}
-
-app.UseHttpsRedirection();
-app.UseStaticFiles();
-app.UseAntiforgery();
-
-app.MapStaticAssets();
-app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
-
-String ruta = "facturasdb.db";
-
-builder.Configuration.AddInMemoryCollection(new[] {
-    new KeyValuePair<string, string>("ConnectionStrings:DefaultConnection", $"DataSource={ruta}")
-});
-
-using var conexion =  new SqliteConnection(app.Configuration.GetConnectionString("DefaultConnection"));
+using var conexion = new SqliteConnection(app.Configuration.GetConnectionString("DefaultConnection"));
 conexion.Open();
 
 var comando = conexion.CreateCommand();
@@ -59,5 +43,21 @@ CREATE TABLE IF NOT EXISTS FacturaProductos (
     FOREIGN KEY (FacturaID) REFERENCES Facturas (FacturaID) ON DELETE CASCADE
 );";
 comando.ExecuteNonQuery();
+
+// Configure the HTTP request pipeline.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseAntiforgery();
+
+app.MapStaticAssets();
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
 
 app.Run();
