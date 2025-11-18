@@ -1,6 +1,76 @@
 ﻿@page "/dashboard" 
-<h3>Dashboard</h3>
+@using facturas.Components.Data
+@using facturas.Components.Servicios
+@rendermode InteractiveServer
+@inject ServicioControlador ServicioControlador
+
+
+<PageTitle>Dashboard</PageTitle>
+
+<h1 class="mb-4">Tablero de Control</h1>
+
+@if (datos == null)
+{
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Cargando...</span>
+    </div>
+}
+else
+{  
+    <div class="row">
+        <div class="card text-white bg-primary h-100 shadow">
+            <div class="card-header">Mejor Cliente</div>
+            <div class="card-body">
+                <h5 class="card-title display-6">@datos.TopClienteNombre</h5>
+                <p class="card-text fs-4">
+                    Compras: @datos.TopClienteTotal.ToString("C")
+                </p>
+            </div>
+            <div class="card-footer text-white-50">
+                Cliente con mayor volumen de compras
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card text-white bg-success h-100 shadow">
+            <div class="card-header">Mejor Mes</div>
+                <div class="card-body">
+                    <h5 class="card-title-display-6">@datos.NombreMes</h5>
+                    <p class="card-text fs-4">
+                        Ventas: @datos.TopMesTotal.ToString("C")
+                    </p>
+                </div>
+              <div class="card-footer text-white-50">
+                    Mes con Mayor facturacion
+              </div>
+        </div>
+    </div>
+
+    <div class="col-md-4 mb-4">
+        <div class="card text-dark bg-warning h-100 shadow">
+            <div class="card-header">Producto mas vendido</div>
+            <div class="card-body">
+                <h5 class="card-title display-6">@datos.TopProductoNombre</h5>
+                <p class="card-text fs-4">
+                    Unidades: @datos.TopProductoCantidad
+                </p>
+            </div>
+            <div class="card-footer text-dark-50">
+                Articulo mas vendido
+            </div>
+        </div>
+    </div>
+
+}
 
 @code {
+    private DatosDashboard? datos;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Delay(300);
+        datos = await ServicioControlador.ObtenerDashboardAsync();
+    }
 
 }

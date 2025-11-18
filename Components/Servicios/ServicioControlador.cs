@@ -42,5 +42,10 @@ namespace facturas.Components.Servicios
         {
             return await _servicioFacturas.ObtenerFacturasPorAnioAsync(anio);
         }
+
+        public async Task<DatosDashboard> ObtenerDashboardAsync() 
+        {
+            return await _servicioFacturas.ObtenerDashboardAsync(); 
+        }
     }
 }
