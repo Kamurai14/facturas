@@ -25,7 +25,7 @@
 {
     @if (datosReporte.Any())
     {
-        <h3 class="mb-3">Resultados para el año @anioSeleccionado</h3>
+        <h3 class="mb-3">Resumen Mensual para @anioSeleccionado</h3>
         <table class="table table-striped table-hover">
             <thead class="table-dark">
                 <tr>
@@ -49,6 +49,34 @@
                 </tr>
             </tfoot>
         </table>
+
+        @if (facturasDelAnio != null && facturasDelAnio.Any())
+        {
+            <hr class="mt-5 mb-4" />
+            <h3 class="mb-3">Detalle de Facturas para @anioSeleccionado</h3>
+
+            <table class="table table-sm table-striped">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Fecha</th>
+                        <th>Cliente</th>
+                        <th class="text-end">Total Factura</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var fact in facturasDelAnio)
+                    {
+                        <tr>
+                            <td>@fact.FacturaID</td>
+                            <td>@fact.Fecha.ToShortDateString()</td>
+                            <td>@fact.Nombre</td>
+                            <td class="text-end">@fact.TotalFactura.ToString("C")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
     }
     else
     {
@@ -62,10 +90,14 @@ else if (!string.IsNullOrEmpty(mensajeError))
     <div class="alert alert-danger">@mensajeError</div>
 }
 
+
 @code {
     private int anioSeleccionado = DateTime.Now.Year;
 
     private List<ReporteMensual>? datosReporte;
+
+    private List<Factura>? facturasDelAnio;
+
     private decimal totalAnual;
     private string mensajeError = string.Empty;
 
@@ -73,11 +105,18 @@ else if (!string.IsNullOrEmpty(mensajeError))
     {
         mensajeError = string.Empty;
         datosReporte = null;
+        facturasDelAnio = null;
         totalAnual = 0;
 
         try
         {
-            datosReporte = await ServicioControlador.ObtenerReporteAnualAsync(anioSeleccionado);
+            var reporteTask = ServicioControlador.ObtenerReporteAnualAsync(anioSeleccionado);
+            var facturasTask = ServicioControlador.ObtenerFacturasPorAnioAsync(anioSeleccionado);
+
+            await Task.WhenAll(reporteTask, facturasTask);
+
+            datosReporte = await reporteTask;
+            facturasDelAnio = await facturasTask;
 
             if (datosReporte != null && datosReporte.Any())
             {

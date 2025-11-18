@@ -37,5 +37,10 @@ namespace facturas.Components.Servicios
         {
             return await _servicioFacturas.ObtenerReporteAnualAsync(anio);
         }
+
+        public async Task<List<Factura>> ObtenerFacturasPorAnioAsync(int anio)
+        {
+            return await _servicioFacturas.ObtenerFacturasPorAnioAsync(anio);
+        }
     }
 }

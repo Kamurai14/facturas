@@ -213,5 +213,32 @@ namespace facturas.Components.Data
             }
             return reporte;
         }
+
+        public async Task<List<Factura>> ObtenerFacturasPorAnioAsync(int anio)
+        {
+            var facturas = new List<Factura>();
+            await using var conexion = await ObtenerConexionAbiertaAsync();
+            var comando = conexion.CreateCommand();
+            comando.CommandText = @"
+        SELECT FacturaID, Fecha, NombreCliente, TotalFactura 
+        FROM Facturas 
+        WHERE STRFTIME('%Y', Fecha) = $anio
+        ORDER BY Fecha ASC";
+
+            comando.Parameters.AddWithValue("$anio", anio.ToString());
+
+            using var lector = await comando.ExecuteReaderAsync();
+            while (await lector.ReadAsync())
+            {
+                facturas.Add(new Factura
+                {
+                    FacturaID = lector.GetInt32(lector.GetOrdinal("FacturaID")),
+                    Fecha = DateOnly.Parse(lector.GetString(lector.GetOrdinal("Fecha"))),
+                    Nombre = lector.GetString(lector.GetOrdinal("NombreCliente")),
+                    TotalFactura = lector.GetDecimal(lector.GetOrdinal("TotalFactura"))
+                });
+            }
+            return facturas;
+        }
     }
 }
