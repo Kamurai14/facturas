@@ -1,0 +1,92 @@
+﻿@page "/reporte"
+@using facturas.Components.Data
+@using facturas.Components.Servicios
+@rendermode InteractiveServer
+@inject ServicioControlador ServicioControlador
+
+<PageTitle>Reporte Anual</PageTitle>
+
+<h1>Reporte Anual de Facturación</h1>
+<p>Selecciona un año para ver el total de ventas facturado por mes.</p>
+
+<div class="row align-items-end mb-4">
+    <div class="col-md-3">
+        <label for="anioInput" class="form-label"><strong>Seleccione el Año:</strong></label>
+        <input type="number" id="anioInput" class="form-control" @bind="anioSeleccionado" />
+    </div>
+    <div class="col-md-3">
+        <button class="btn btn-primary" @onclick="GenerarReporte">
+            <span class="oi oi-bar-chart" aria-hidden="true"></span> Generar Reporte
+        </button>
+    </div>
+</div>
+
+@if (datosReporte != null)
+{
+    @if (datosReporte.Any())
+    {
+        <h3 class="mb-3">Resultados para el año @anioSeleccionado</h3>
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Mes</th>
+                    <th class="text-end">Total del Mes</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in datosReporte)
+                {
+                    <tr>
+                        <td>@item.NombreMes</td>
+                        <td class="text-end">@item.TotalMes.ToString("C")</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr class="table-success fw-bold fs-5">
+                    <td>Total General del Año:</td>
+                    <td class="text-end">@totalAnual.ToString("C")</td>
+                </tr>
+            </tfoot>
+        </table>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            No se encontraron facturas para el año @anioSeleccionado.
+        </div>
+    }
+}
+else if (!string.IsNullOrEmpty(mensajeError))
+{
+    <div class="alert alert-danger">@mensajeError</div>
+}
+
+@code {
+    private int anioSeleccionado = DateTime.Now.Year;
+
+    private List<ReporteMensual>? datosReporte;
+    private decimal totalAnual;
+    private string mensajeError = string.Empty;
+
+    private async Task GenerarReporte()
+    {
+        mensajeError = string.Empty;
+        datosReporte = null;
+        totalAnual = 0;
+
+        try
+        {
+            datosReporte = await ServicioControlador.ObtenerReporteAnualAsync(anioSeleccionado);
+
+            if (datosReporte != null && datosReporte.Any())
+            {
+                totalAnual = datosReporte.Sum(item => item.TotalMes);
+            }
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al generar el reporte: {ex.Message}";
+        }
+    }
+}
