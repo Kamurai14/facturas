@@ -240,5 +240,64 @@ namespace facturas.Components.Data
             }
             return facturas;
         }
+
+        public async Task<DatosDashboard> ObtenerDashboardAsync()
+        {
+            var datos = new DatosDashboard();
+            await using var conexion = await ObtenerConexionAbiertaAsync();
+
+            var cmdCliente = conexion.CreateCommand();
+            cmdCliente.CommandText = @"
+                SELECT NombreCliente, SUM(TotalFactura) as Total
+                FROM Facturas
+                GROUP BY NombreCliente
+                ORDER BY Total DESC
+                LIMIT 1";
+
+            using (var lector = await cmdCliente.ExecuteReaderAsync())
+            {
+                if (await lector.ReadAsync())
+                {
+                    datos.TopClienteNombre = lector.GetString(0);
+                    datos.TopClienteTotal = lector.GetDecimal(1);
+                }
+            }
+
+            var cmdMes = conexion.CreateCommand();
+            cmdMes.CommandText = @"
+                SELECT STRFTIME('%m', Fecha) as Mes, SUM(TotalFactura) as Total
+                FROM Facturas
+                GROUP BY Mes
+                ORDER BY Total DESC
+                LIMIT 1";
+
+            using (var lector = await cmdMes.ExecuteReaderAsync())
+            {
+                if (await lector.ReadAsync())
+                {
+                    datos.TopMesNumero = lector.GetString(0);
+                    datos.TopMesTotal = lector.GetDecimal(1);   
+                }
+            }
+
+            var cmdProd = conexion.CreateCommand();
+            cmdProd.CommandText = @"
+                SELECT Nombre, SUM(Cantidad) as TotalVendidos
+                FROM FacturasProductos
+                GROUP BY Nombre
+                ORDER BY TotalVendidos DESC
+                LIMIT 1";
+
+            using (var lector = await cmdProd.ExecuteReaderAsync()) 
+            {
+                if (await lector.ReadAsync()) 
+                {
+                    datos.TopProductoNombre = lector.GetString(0);  
+                    datos.TopProductoCantidad = lector.GetInt32(1);
+                }
+            }
+
+            return datos;
+        }
     }
 }
