@@ -116,6 +116,35 @@ else
         <strong>Nota:</strong> Estadísticas actualizadas en tiempo real.
     </div>
 
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-primary mb-3">
+                <div class="card-body text-primary">
+                    <h5 class="card-title">Ventas Este Mes</h5>
+                    <p class="card-text display-6">@datos.VentasMesActual.ToString("C")</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-secondary mb-3">
+                <div class="card-body text-secondary">
+                    <h5 class="card-title">Clientes Totales</h5>
+                    <p class="card-text display-6">@datos.TotalClientesUnicos</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-success mb-3">
+                <div class="card-body text-success">
+                    <h5 class="card-title">Mayor Ingreso: @datos.ProductoMasRentableNombre</h5>
+                    <p class="card-text display-6">@datos.ProductoMasRentableTotal.ToString("C")</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
 }
 
 @code {

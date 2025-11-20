@@ -314,10 +314,10 @@ namespace facturas.Components.Data
 
             var cmdRecientes = conexion.CreateCommand();
             cmdRecientes.CommandText = @"
-        SELECT FacturaID, Fecha, NombreCliente, TotalFactura 
-        FROM Facturas 
-        ORDER BY FacturaID DESC 
-        LIMIT 5"; 
+                SELECT FacturaID, Fecha, NombreCliente, TotalFactura 
+                FROM Facturas 
+                ORDER BY FacturaID DESC 
+                LIMIT 5"; 
 
             using (var lector = await cmdRecientes.ExecuteReaderAsync())
             {
@@ -330,6 +330,39 @@ namespace facturas.Components.Data
                         Nombre = lector.GetString(2),
                         TotalFactura = lector.GetDecimal(3)
                     });
+                }
+            }
+
+            var cmdMesActual = conexion.CreateCommand();
+            cmdMesActual.CommandText = @"
+                SELECT SUM(TotalFactura) 
+                FROM Facturas 
+                WHERE STRFTIME('%Y-%m', Fecha) = STRFTIME('%Y-%m', 'now')";
+
+            var resultadoMes = await cmdMesActual.ExecuteScalarAsync();
+            if (resultadoMes != DBNull.Value && resultadoMes != null)
+            {
+                datos.VentasMesActual = Convert.ToDecimal(resultadoMes);
+            }
+
+            var cmdClientes = conexion.CreateCommand();
+            cmdClientes.CommandText = "SELECT COUNT(DISTINCT NombreCliente) FROM Facturas";
+            datos.TotalClientesUnicos = Convert.ToInt32(await cmdClientes.ExecuteScalarAsync());
+
+            var cmdRentable = conexion.CreateCommand();
+            cmdRentable.CommandText = @"
+                SELECT Nombre, SUM(Cantidad * PrecioUnitario) as TotalGanado
+                FROM FacturaProductos
+                GROUP BY Nombre
+                ORDER BY TotalGanado DESC
+                LIMIT 1";
+
+            using (var lector = await cmdRentable.ExecuteReaderAsync())
+            {
+                if (await lector.ReadAsync())
+                {
+                    datos.ProductoMasRentableNombre = lector.GetString(0);
+                    datos.ProductoMasRentableTotal = lector.GetDecimal(1);
                 }
             }
 

@@ -29,5 +29,10 @@ namespace facturas.Components.Data
         public int TotalFacturasEmitidas { get; set; } = 0;
 
         public List<Factura> UltimasFacturas { get; set; } = new List<Factura>();
+
+        public decimal VentasMesActual { get; set; } = 0;
+        public int TotalClientesUnicos { get; set; } = 0;
+        public string ProductoMasRentableNombre { get; set; } = "N/A";
+        public decimal ProductoMasRentableTotal { get; set; } = 0;
     }
 }
