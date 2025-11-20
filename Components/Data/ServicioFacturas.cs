@@ -283,7 +283,7 @@ namespace facturas.Components.Data
             var cmdProd = conexion.CreateCommand();
             cmdProd.CommandText = @"
                 SELECT Nombre, SUM(Cantidad) as TotalVendidos
-                FROM FacturasProductos
+                FROM FacturaProductos
                 GROUP BY Nombre
                 ORDER BY TotalVendidos DESC
                 LIMIT 1";
