@@ -297,6 +297,42 @@ namespace facturas.Components.Data
                 }
             }
 
+            var cmdPromedio = conexion.CreateCommand();
+            cmdPromedio.CommandText = "SELECT AVG(TotalFactura), COUNT(*) FROM Facturas";
+
+            using (var lector = await cmdPromedio.ExecuteReaderAsync())
+            {
+                if (await lector.ReadAsync())
+                {
+                    if (!lector.IsDBNull(0))
+                    {
+                        datos.TicketPromedio = lector.GetDecimal(0);
+                        datos.TotalFacturasEmitidas = lector.GetInt32(1);
+                    }
+                }
+            }
+
+            var cmdRecientes = conexion.CreateCommand();
+            cmdRecientes.CommandText = @"
+        SELECT FacturaID, Fecha, NombreCliente, TotalFactura 
+        FROM Facturas 
+        ORDER BY FacturaID DESC 
+        LIMIT 5"; 
+
+            using (var lector = await cmdRecientes.ExecuteReaderAsync())
+            {
+                while (await lector.ReadAsync())
+                {
+                    datos.UltimasFacturas.Add(new Factura
+                    {
+                        FacturaID = lector.GetInt32(0),
+                        Fecha = DateOnly.Parse(lector.GetString(1)),
+                        Nombre = lector.GetString(2),
+                        TotalFactura = lector.GetDecimal(3)
+                    });
+                }
+            }
+
             return datos;
         }
     }
