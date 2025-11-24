@@ -6,166 +6,190 @@
 @inject ServicioControlador ServicioControlador
 @inject IJSRuntime JSRuntime
 
-<PageTitle>Factura</PageTitle>
+<PageTitle>Gestión de Facturas</PageTitle>
 
-@if (modoEdicion)
-{
-    <h1>Editando Factura #@factura.FacturaID</h1>
-}
-else
-{
-    <h1>Nueva Factura</h1>
-}
+<div class="warm-layout">
 
-
-<div class="container">
-
-    <div class="row">
-        <div class="col-md-4">
-            <h3>Datos del cliente</h3>
-            <div class="mb-3">
-                <label>Nombre del cliente:</label>
-                <input type="text" class="form-control" @bind="factura.Nombre" />
-            </div>
-            <div class="mb-3">
-                <label>Fecha de la factura:</label>
-                <input type="date" class="form-control" @bind="factura.Fecha" />
-            </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            @if (modoEdicion)
+            {
+                <h1 class="mb-1">Editar Factura <span style="color:var(--primary-warm)">#@factura.FacturaID</span></h1>
+                <p class="text-muted">Modifica los detalles a continuación.</p>
+            }
+            else
+            {
+                <h1 class="mb-1">Nueva Factura</h1>
+                <p class="text-muted">Crea un nuevo registro de venta.</p>
+            }
         </div>
-
-        <div class="col-md-8">
-            <h3>Añadir Artículo</h3>
-            <div class="row g-3 align-items-end">
-                <div class="col-sm"><label>Artículo</label><input class="form-control" @bind="nuevoProducto.Nombre" /></div>
-                <div class="col-sm-2"><label>Cant.</label><input type="number" class="form-control" @bind="nuevoProducto.Cantidad" /></div>
-                <div class="col-sm-3"><label>Precio</label><input type="number" class="form-control" @bind="nuevoProducto.PrecioUnitario" /></div>
-                <div class="col-sm-auto"><button class="btn btn-primary" @onclick="AgregarProducto">Añadir</button></div>
-            </div>
-        </div>
-    </div>
-    <hr />
-
-    <h3>Artículos</h3>
-    @if (factura.Productos.Any())
-    {
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Artículo</th>
-                    <th>Cantidad</th>
-                    <th>Precio Unitario</th>
-                    <th>Total Artículo</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var prod in factura.Productos)
-                {
-                    <tr>
-                        <td>@prod.Nombre</td>
-                        <td>@prod.Cantidad</td>
-                        <td>@prod.PrecioUnitario.ToString("C")</td>
-                        <td>@prod.TotalItem.ToString("C")</td>
-                        <td>
-                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarProducto(prod)">
-                                Quitar
-                            </button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-        <div class="text-end">
-            <h2 class="mt-4">Total Factura: @factura.TotalFactura.ToString("C")</h2>
-        </div>
-    }
-    else
-    {
-
-        <p>No se han añadido productos.</p>
-    }
-
-    <div class="mt-4">
         @if (modoEdicion)
         {
-            <button class="btn btn-warning btn-lg me-2" @onclick="GuardarFactura">
-                Actualizar Factura
-            </button>
-            <button class="btn btn-secondary btn-lg" @onclick="CancelarEdicion">
-                Cancelar
-            </button>
+            <span class="badge bg-warning text-dark">Modo Edición</span>
+        }
+    </div>
+
+    <div class="warm-card">
+        <div class="row">
+            <div class="col-md-4 border-end pe-md-4" style="border-color: var(--border-subtle) !important;">
+                <h5 class="mb-3">Información del Cliente</h5>
+                <div class="mb-3">
+                    <span class="text-label">Nombre Completo</span>
+                    <input type="text" class="form-control" @bind="factura.Nombre" placeholder="Ej. Juan Pérez" />
+                </div>
+                <div class="mb-3">
+                    <span class="text-label">Fecha de Emisión</span>
+                    <input type="date" class="form-control" @bind="factura.Fecha" />
+                </div>
+            </div>
+
+            <div class="col-md-8 ps-md-4">
+                <h5 class="mb-3">Agregar Conceptos</h5>
+                <div class="row g-2 align-items-end bg-light p-3 rounded-3" style="background-color: #faf9f8 !important;">
+                    <div class="col-sm-5">
+                        <span class="text-label">Descripción</span>
+                        <input class="form-control" @bind="nuevoProducto.Nombre" placeholder="Producto o servicio" />
+                    </div>
+                    <div class="col-sm-2">
+                        <span class="text-label">Cant.</span>
+                        <input type="number" class="form-control" @bind="nuevoProducto.Cantidad" />
+                    </div>
+                    <div class="col-sm-3">
+                        <span class="text-label">Precio Unit.</span>
+                        <input type="number" class="form-control" @bind="nuevoProducto.PrecioUnitario" />
+                    </div>
+                    <div class="col-sm-2">
+                        <button class="btn btn-primary w-100" @onclick="AgregarProducto">
+                            +
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    @if (factura.Productos.Any())
+                    {
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Concepto</th>
+                                    <th class="text-center">Cant.</th>
+                                    <th class="text-end">Precio</th>
+                                    <th class="text-end">Subtotal</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var prod in factura.Productos)
+                                {
+                                    <tr>
+                                        <td>@prod.Nombre</td>
+                                        <td class="text-center">@prod.Cantidad</td>
+                                        <td class="text-end">@prod.PrecioUnitario.ToString("C")</td>
+                                        <td class="text-end fw-bold">@prod.TotalItem.ToString("C")</td>
+                                        <td class="text-end">
+                                            <button class="btn btn-danger btn-sm py-1 px-2" @onclick="() => EliminarProducto(prod)">✕</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+
+                        <div class="d-flex justify-content-end align-items-center mt-4 pt-3 border-top" style="border-color: var(--border-subtle) !important;">
+                            <div class="text-end">
+                                <span class="text-label">Total a Pagar</span>
+                                <div class="fs-1 fw-bold" style="color: var(--primary-warm);">@factura.TotalFactura.ToString("C")</div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5 text-muted">
+                            <p>Añade artículos arriba para comenzar la factura.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+            @if (modoEdicion)
+            {
+                <button class="btn btn-primary px-4" @onclick="GuardarFactura">
+                    Guardar Cambios
+                </button>
+                <button class="btn btn-secondary px-4" @onclick="CancelarEdicion">
+                    Cancelar
+                </button>
+            }
+            else
+            {
+                <button class="btn btn-primary px-4" @onclick="GuardarFactura" disabled="@(factura.Productos.Count == 0)">
+                    Generar Factura
+                </button>
+            }
+        </div>
+
+        @if (!string.IsNullOrEmpty(mensajeError))
+        {
+            <div class="alert alert-danger mt-3 border-0 bg-danger bg-opacity-10 text-danger">@mensajeError</div>
+        }
+        @if (!string.IsNullOrEmpty(mensajeExito))
+        {
+            <div class="alert alert-success mt-3 border-0 bg-success bg-opacity-10 text-success">@mensajeExito</div>
+        }
+    </div>
+
+    <div class="mt-5">
+        <h3 class="mb-4">Historial de Facturas</h3>
+
+        @if (facturasGuardadas.Count == 0)
+        {
+            <div class="text-center text-muted py-4">No hay facturas registradas en el sistema.</div>
         }
         else
         {
-            <button class="btn btn-success btn-lg" @onclick="GuardarFactura" disabled="@(factura.Productos.Count == 0)">
-                Guardar Factura
-            </button>
+            <div class="warm-card p-0 overflow-hidden">
+                <table class="table mb-0" style="margin-top:0;">
+                    <thead style="background-color: #faf9f8;">
+                        <tr>
+                            <th class="ps-4">ID</th>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th>Total</th>
+                            <th class="text-end pe-4">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var fact in facturasGuardadas)
+                        {
+                            <tr>
+                                <td class="ps-4 text-muted">#@fact.FacturaID</td>
+                                <td>@fact.Fecha.ToShortDateString()</td>
+                                <td class="fw-bold">@fact.Nombre</td>
+                                <td style="color: var(--primary-warm);">@fact.TotalFactura.ToString("C")</td>
+                                <td class="text-end pe-4">
+                                    <button class="btn btn-secondary btn-sm me-1" @onclick="() => CargarFacturaParaEditar(fact)">
+                                        Editar
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" @onclick="() => EliminarFacturaGuardada(fact)">
+                                        Eliminar
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         }
     </div>
-
-    @if (!string.IsNullOrEmpty(mensajeError))
-    {
-        <div class="alert alert-danger mt-3">@mensajeError</div>
-    }
-    @if (!string.IsNullOrEmpty(mensajeExito))
-    {
-        <div class="alert alert-success mt-3">@mensajeExito</div>
-    }
-
-
-    <hr class="mt-5" />
-
-    <h2>Facturas Guardadas</h2>
-
-    @if (facturasGuardadas.Count == 0)
-    {
-        <p>No hay facturas guardadas.</p>
-    }
-    else
-    {
-        <table class="table table-striped mt-3">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Fecha</th>
-                    <th>Cliente</th>
-                    <th>Total</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var fact in facturasGuardadas)
-                {
-                    <tr>
-                        <td>@fact.FacturaID</td>
-                        <td>@fact.Fecha.ToShortDateString()</td>
-                        <td>@fact.Nombre</td>
-                        <td>@fact.TotalFactura.ToString("C")</td>
-                        <td>
-                            <button class="btn btn-primary btn-sm" @onclick="() => CargarFacturaParaEditar(fact)">
-                                Editar
-                            </button>
-                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarFacturaGuardada(fact)">
-                                Eliminar
-                            </button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
-
 </div>
-
 
 @code {
     private Factura factura = new Factura();
     private Producto nuevoProducto = new Producto();
     private string mensajeError = string.Empty;
     private string mensajeExito = string.Empty;
-
     private bool modoEdicion = false;
-
     private List<Factura> facturasGuardadas = new List<Factura>();
 
     private async Task CargarFacturasGuardadas()
@@ -240,8 +264,8 @@ else
                 mensajeExito = "¡Factura guardada correctamente!";
             }
 
-            factura = new Factura(); 
-            await CargarFacturasGuardadas(); 
+            factura = new Factura();
+            await CargarFacturasGuardadas();
         }
         catch (Exception ex)
         {
@@ -278,7 +302,6 @@ else
     {
         try
         {
-            
             bool confirmado = await JSRuntime.InvokeAsync<bool>("confirm",
                 $"¿Estás seguro de que quieres eliminar la Factura #{facturaAEliminar.FacturaID} del cliente {facturaAEliminar.Nombre}?");
 
@@ -286,7 +309,7 @@ else
             {
                 await ServicioControlador.EliminarFacturaAsync(facturaAEliminar.FacturaID);
                 mensajeExito = "Factura eliminada.";
-                await CargarFacturasGuardadas(); 
+                await CargarFacturasGuardadas();
             }
         }
         catch (Exception ex)
