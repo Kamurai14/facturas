@@ -153,3 +153,51 @@ h1, h2, h3, h4, h5, h6 {
     margin-bottom: 0.4rem;
     display: block;
 }
+
+/* Barra de navegacion superior */
+
+.warm-navbar {
+    background-color: var(--bg-card) !important; 
+    border-bottom: 1px solid var(--border-subtle);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03); 
+    padding: 0.8rem 1rem;
+}
+
+    /* Marca / Logo */
+    .warm-navbar .navbar-brand {
+        color: var(--primary-warm) !important; 
+        font-weight: 700;
+        font-size: 1.3rem;
+        letter-spacing: -0.5px;
+    }
+
+    /* Enlaces del menú */
+    .warm-navbar .nav-link {
+        color: var(--text-muted) !important;
+        font-weight: 500;
+        margin: 0 15px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        padding: 0.5rem 1.2rem !important;
+    }
+
+        /* Hover (pasar el mouse) */
+        .warm-navbar .nav-link:hover {
+            color: var(--primary-warm) !important;
+            background-color: #faf9f8; 
+        }
+
+        /* Enlace Activo (Página actual) */
+        .warm-navbar .nav-link.active {
+            color: var(--primary-warm) !important;
+            background-color: var(--secondary-warm); 
+            font-weight: 600;
+        }
+
+.navbar-toggler {
+    border-color: var(--border-subtle);
+}
+
+.navbar-toggler-icon {
+    filter: invert(0.5); /
+}
