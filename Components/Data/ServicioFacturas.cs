@@ -377,5 +377,43 @@ namespace facturas.Components.Data
 
             return datos;
         }
+
+        public async Task CambiarEstadoArchivoAsync(int facturaID, bool archivar) 
+        {
+            await using var conexion = await ObtenerConexionAbiertaAsync();
+            var comando = conexion.CreateCommand();
+
+            comando.CommandText = "UPDATE Facturas SET Archivada = $estado WHERE FacturaID = $id";
+            comando.Parameters.AddWithValue("$estado", archivar ? 1 : 0);
+            comando.Parameters.AddWithValue("$id", facturaID);
+            await comando.ExecuteNonQueryAsync();
+        }
+
+        public async Task<List<Factura>> ObtenerFacturasArchivadasAsync()
+        {
+            var facturas = new List<Factura>();
+            await using var conexion = await ObtenerConexionAbiertaAsync();
+            var comando = conexion.CreateCommand();
+
+            comando.CommandText = @"
+                SELECT FacturaID, Fecha, NombreCliente, TotalFactura
+                FROM Facturas
+                WHERE Archivada = 1
+                ORDER BY Fecha DESC";
+                
+            using var lector = await comando.ExecuteReaderAsync();
+            while (await lector.ReadAsync())
+            {
+                facturas.Add(new Factura
+                {
+                    FacturaID = lector.GetInt32(0),
+                    Fecha = DateOnly.Parse(lector.GetString(1)),
+                    Nombre = lector.GetString(2),
+                    TotalFactura = lector.GetDecimal(3),
+                    Archivada = true
+                });
+            }
+            return facturas;    
+        }
     }
 }
