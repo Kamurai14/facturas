@@ -50,6 +50,7 @@ namespace facturas.Components.Data
             comando.CommandText = @"
         SELECT FacturaID, Fecha, NombreCliente, TotalFactura 
         FROM Facturas 
+        WHERE Archivada = 0
         ORDER BY FacturaID DESC";
 
             using var lector = await comando.ExecuteReaderAsync();
@@ -196,7 +197,7 @@ namespace facturas.Components.Data
             STRFTIME('%m', Fecha) AS Mes, 
             SUM(TotalFactura) AS TotalMes
         FROM Facturas
-        WHERE STRFTIME('%Y', Fecha) = $anio
+        WHERE STRFTIME('%Y', Fecha) = $anio AND Archivada = 0
         GROUP BY Mes
         ORDER BY Mes ASC;";
 
@@ -222,7 +223,7 @@ namespace facturas.Components.Data
             comando.CommandText = @"
         SELECT FacturaID, Fecha, NombreCliente, TotalFactura 
         FROM Facturas 
-        WHERE STRFTIME('%Y', Fecha) = $anio
+        WHERE STRFTIME('%Y', Fecha) = $anio AND Archivada = 0
         ORDER BY Fecha ASC";
 
             comando.Parameters.AddWithValue("$anio", anio.ToString());
@@ -250,6 +251,7 @@ namespace facturas.Components.Data
             cmdCliente.CommandText = @"
                 SELECT NombreCliente, SUM(TotalFactura) as Total
                 FROM Facturas
+                WHERE Archivada = 0
                 GROUP BY NombreCliente
                 ORDER BY Total DESC
                 LIMIT 1";
@@ -267,6 +269,7 @@ namespace facturas.Components.Data
             cmdMes.CommandText = @"
                 SELECT STRFTIME('%m', Fecha) as Mes, SUM(TotalFactura) as Total
                 FROM Facturas
+                WHERE Archivada = 0 
                 GROUP BY Mes
                 ORDER BY Total DESC
                 LIMIT 1";
@@ -282,9 +285,11 @@ namespace facturas.Components.Data
 
             var cmdProd = conexion.CreateCommand();
             cmdProd.CommandText = @"
-                SELECT Nombre, SUM(Cantidad) as TotalVendidos
-                FROM FacturaProductos
-                GROUP BY Nombre
+                SELECT FP.Nombre, SUM(FP.Cantidad) as TotalVendidos
+                FROM FacturaProductos FP
+                INNER JOIN Facturas F ON FP.FacturasID = F.FacturaID
+                WHERE F.Archivada = 0 
+                GROUP BY FP.Nombre
                 ORDER BY TotalVendidos DESC
                 LIMIT 1";
 
@@ -298,7 +303,7 @@ namespace facturas.Components.Data
             }
 
             var cmdPromedio = conexion.CreateCommand();
-            cmdPromedio.CommandText = "SELECT AVG(TotalFactura), COUNT(*) FROM Facturas";
+            cmdPromedio.CommandText = "SELECT AVG(TotalFactura), COUNT(*) FROM Facturas WHERE Archivada = 0";
 
             using (var lector = await cmdPromedio.ExecuteReaderAsync())
             {
@@ -316,6 +321,7 @@ namespace facturas.Components.Data
             cmdRecientes.CommandText = @"
                 SELECT FacturaID, Fecha, NombreCliente, TotalFactura 
                 FROM Facturas 
+                WHERE Archivada = 0
                 ORDER BY FacturaID DESC 
                 LIMIT 5"; 
 
@@ -337,7 +343,8 @@ namespace facturas.Components.Data
             cmdMesActual.CommandText = @"
                 SELECT SUM(TotalFactura) 
                 FROM Facturas 
-                WHERE STRFTIME('%Y-%m', Fecha) = STRFTIME('%Y-%m', 'now')";
+                WHERE STRFTIME('%Y-%m', Fecha) = STRFTIME('%Y-%m', 'now')
+                AND Archivada = 0";
 
             var resultadoMes = await cmdMesActual.ExecuteScalarAsync();
             if (resultadoMes != DBNull.Value && resultadoMes != null)
@@ -346,14 +353,16 @@ namespace facturas.Components.Data
             }
 
             var cmdClientes = conexion.CreateCommand();
-            cmdClientes.CommandText = "SELECT COUNT(DISTINCT NombreCliente) FROM Facturas";
+            cmdClientes.CommandText = "SELECT COUNT(DISTINCT NombreCliente) FROM Facturas WHERE Archivada = 0";
             datos.TotalClientesUnicos = Convert.ToInt32(await cmdClientes.ExecuteScalarAsync());
 
             var cmdRentable = conexion.CreateCommand();
             cmdRentable.CommandText = @"
-                SELECT Nombre, SUM(Cantidad * PrecioUnitario) as TotalGanado
-                FROM FacturaProductos
-                GROUP BY Nombre
+                SELECT FP.Nombre, SUM(FP.Cantidad * FP.PrecioUnitario) as TotalGanado
+                FROM FacturaProductos FP
+                INNER JOIN Facturas F ON FP.FacturaID = F.FacturaID
+                WHERE F.Archivada = 0
+                GROUP BY FP.Nombre
                 ORDER BY TotalGanado DESC
                 LIMIT 1";
 
