@@ -44,6 +44,29 @@ CREATE TABLE IF NOT EXISTS FacturaProductos (
 );";
 comando.ExecuteNonQuery();
 
+/*using (var scope = app.Services.CreateScope())
+{
+    var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+    var connectionString = config.GetConnectionString("DefaultConnection");
+
+    using (var connection = new Microsoft.Data.Sqlite.SqliteConnection(connectionString))
+    {
+        connection.Open();
+        var command = connection.CreateCommand();
+        command.CommandText = "ALTER TABLE Facturas ADD COLUMN Archivada INTEGER DEFAULT 0;";
+
+        try
+        {
+            command.ExecuteNonQuery();
+            Console.WriteLine("¡Base de datos actualizada con éxito!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Nota: " + ex.Message);
+        }
+    }
+}*/
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
