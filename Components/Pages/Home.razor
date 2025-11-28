@@ -171,6 +171,11 @@
                                     <button class="btn btn-secondary btn-sm me-1" @onclick="() => CargarFacturaParaEditar(fact)">
                                         Editar
                                     </button>
+
+                                    <button class="btn btn-warning btn-sm me-1" @onclick="() => ArchivarFactura(fact)" title="Ocultar de reportes">
+                                        Archivar
+                                    </button>
+
                                     <button class="btn btn-danger btn-sm" @onclick="() => EliminarFacturaGuardada(fact)">
                                         Eliminar
                                     </button>
@@ -315,6 +320,20 @@
         catch (Exception ex)
         {
             mensajeError = $"Error al eliminar la factura: {ex.Message}";
+        }
+    }
+
+    private async Task ArchivarFactura(Factura facturaAArchivar)
+    {
+        bool confirmado = await JSRuntime.InvokeAsync<bool>("confirm",
+            $"¿Quieres archivar la Factura #{facturaAArchivar.FacturaID}? Desaparecerá de la lista y los reportes.");
+
+        if (confirmado)
+        {
+            await ServicioControlador.CambiarEstadoArchivoAsync(facturaAArchivar.FacturaID, true);
+
+            mensajeExito = "Factura archivada correctamente.";
+            await CargarFacturasGuardadas();
         }
     }
 }

@@ -1,0 +1,180 @@
+﻿@page "/archivados"
+@using facturas.Components.Data
+@using facturas.Components.Servicios
+@rendermode InteractiveServer
+@inject ServicioControlador ServicioControlador
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Bóveda de Facturas</PageTitle>
+
+<div class="warm-layout">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1">🗄️ Archivo Histórico</h1>
+            <p class="text-muted mb-0">Gestión de facturas ocultas y antiguas.</p>
+        </div>
+
+        @if (accesoConcedido)
+        {
+            <button class="btn btn-outline-danger" @onclick="BloquearDeNuevo">
+                <i class="bi bi-lock-fill"></i> Bloquear
+            </button>
+        }
+    </div>
+
+    @if (!accesoConcedido)
+    {
+        <div class="warm-card text-center py-5">
+            <div class="py-4">
+                <h1 class="display-4 mb-3">🔒</h1>
+                <h3 class="fw-bold text-secondary">Zona Restringida</h3>
+                <p class="text-muted mb-4" style="max-width: 500px; margin: 0 auto;">
+                    Las facturas archivadas no aparecen en los reportes financieros ni en el dashboard principal.
+                    Se requiere autorización para visualizar estos registros.
+                </p>
+
+                @if (!mostrandoInput)
+                {
+                    <button class="btn btn-primary px-5 py-2" @onclick="MostrarInput">
+                        Ver facturas archivadas
+                    </button>
+                }
+                else
+                {
+                    <div class="mx-auto" style="max-width: 300px;">
+                        <div class="input-group mb-2">
+                            <input type="password" class="form-control text-center"
+                                   @bind="passwordInput"
+                                   placeholder="Ingresa la clave..."
+                                   autofocus
+                                   @onkeyup="@(e => { if (e.Key == "Enter") VerificarPassword(); })" />
+                            <button class="btn btn-dark" @onclick="VerificarPassword">Entrar</button>
+                        </div>
+
+                        @if (errorPassword)
+                        {
+                            <div class="text-danger small fw-bold mb-2">Clave incorrecta</div>
+                        }
+
+                        <button class="btn btn-link text-muted text-decoration-none small" @onclick="CancelarInput">
+                            Cancelar
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        @if (facturasArchivadas.Count == 0)
+        {
+            <div class="warm-card text-center py-5 text-muted">
+                <i class="bi bi-folder2-open display-6 d-block mb-3"></i>
+                No hay facturas archivadas actualmente.
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-warning d-flex align-items-center mb-4">
+                <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+                <div>
+                    Estás visualizando facturas archivadas.
+                    <strong>Recuperar</strong> una factura la devolverá a los reportes de ingresos.
+                </div>
+            </div>
+
+            <div class="warm-card p-0 overflow-hidden">
+                <table class="table mb-0">
+                    <thead style="background-color: #faf9f8;">
+                        <tr>
+                            <th class="ps-4">ID</th>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th>Total</th>
+                            <th class="text-end pe-4">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var fact in facturasArchivadas)
+                        {
+                            <tr>
+                                <td class="ps-4 text-muted">#@fact.FacturaID</td>
+                                <td>@fact.Fecha.ToShortDateString()</td>
+                                <td>@fact.Nombre</td>
+                                <td>@fact.TotalFactura.ToString("C")</td>
+                                <td class="text-end pe-4">
+                                    <button class="btn btn-success btn-sm" @onclick="() => Desarchivar(fact)">
+                                        <i class="bi bi-arrow-counterclockwise"></i> Recuperar
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private bool accesoConcedido = false;
+    private bool mostrandoInput = false;
+    private bool errorPassword = false;
+    private string passwordInput = "";
+
+    private List<Factura> facturasArchivadas = new List<Factura>();
+
+    private void MostrarInput()
+    {
+        mostrandoInput = true;
+        errorPassword = false;
+        passwordInput = "";
+    }
+
+    private void CancelarInput()
+    {
+        mostrandoInput = false;
+        errorPassword = false;
+        passwordInput = "";
+    }
+
+    private async Task VerificarPassword()
+    {
+        if (passwordInput == "archivado")
+        {
+            accesoConcedido = true;
+            mostrandoInput = false;
+            await CargarArchivadas();
+        }
+        else
+        {
+            errorPassword = true;
+            passwordInput = "";
+        }
+    }
+
+    private async Task CargarArchivadas()
+    {
+        facturasArchivadas = await ServicioControlador.ObtenerFacturasArchivadasAsync();
+    }
+
+    private async Task Desarchivar(Factura factura)
+    {
+        bool confirm = await JSRuntime.InvokeAsync<bool>("confirm",
+            $"¿Recuperar la factura #{factura.FacturaID}?");
+
+        if (confirm)
+        {
+            await ServicioControlador.CambiarEstadoArchivoAsync(factura.FacturaID, false);
+            await CargarArchivadas();
+        }
+    }
+
+    private void BloquearDeNuevo()
+    {
+        accesoConcedido = false;
+        mostrandoInput = false;
+        passwordInput = "";
+        facturasArchivadas.Clear();
+    }
+}

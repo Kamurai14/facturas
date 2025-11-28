@@ -287,7 +287,7 @@ namespace facturas.Components.Data
             cmdProd.CommandText = @"
                 SELECT FP.Nombre, SUM(FP.Cantidad) as TotalVendidos
                 FROM FacturaProductos FP
-                INNER JOIN Facturas F ON FP.FacturasID = F.FacturaID
+                INNER JOIN Facturas F ON FP.FacturaID = F.FacturaID
                 WHERE F.Archivada = 0 
                 GROUP BY FP.Nombre
                 ORDER BY TotalVendidos DESC

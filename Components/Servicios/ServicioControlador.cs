@@ -47,5 +47,15 @@ namespace facturas.Components.Servicios
         {
             return await _servicioFacturas.ObtenerDashboardAsync(); 
         }
+
+        public async Task CambiarEstadoArchivoAsync(int id, bool archivar)
+        {
+            await _servicioFacturas.CambiarEstadoArchivoAsync(id, archivar);
+        }
+
+        public async Task<List<Factura>> ObtenerFacturasArchivadasAsync()
+        {
+            return await _servicioFacturas.ObtenerFacturasArchivadasAsync();
+        }
     }
 }
